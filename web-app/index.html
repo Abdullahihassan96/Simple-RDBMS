@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Manager - Simple RDBMS Demo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .header h1 {
+        color: #667eea;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        color: #666;
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 768px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .card h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #555;
+        font-weight: 500;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #e0e0e0;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+      }
+
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #5568d3;
+      }
+
+      .btn-success {
+        background: #48bb78;
+        color: white;
+      }
+
+      .btn-success:hover {
+        background: #38a169;
+      }
+
+      .btn-danger {
+        background: #f56565;
+        color: white;
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+
+      .btn-danger:hover {
+        background: #e53e3e;
+      }
+
+      .btn-edit {
+        background: #4299e1;
+        color: white;
+        padding: 5px 10px;
+        font-size: 12px;
+        margin-right: 5px;
+      }
+
+      .btn-edit:hover {
+        background: #3182ce;
+      }
+
+      .tasks-list {
+        grid-column: 1 / -1;
+      }
+
+      .task-item {
+        background: #f7fafc;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid #667eea;
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+      }
+
+      .task-content {
+        flex: 1;
+      }
+
+      .task-title {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 5px;
+        font-size: 1.1rem;
+      }
+
+      .task-description {
+        color: #718096;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+      }
+
+      .task-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 0.85rem;
+        color: #a0aec0;
+      }
+
+      .task-actions {
+        display: flex;
+        gap: 5px;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      .status-pending {
+        background: #fed7d7;
+        color: #742a2a;
+      }
+
+      .status-in_progress {
+        background: #bee3f8;
+        color: #2c5282;
+      }
+
+      .status-completed {
+        background: #c6f6d5;
+        color: #22543d;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #a0aec0;
+      }
+
+      .sql-executor {
+        grid-column: 1 / -1;
+      }
+
+      .sql-result {
+        background: #1a202c;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-family: "Courier New", monospace;
+        font-size: 0.85rem;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #a0aec0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📋 Task Manager</h1>
+        <p>Demonstrating Simple RDBMS - CRUD Operations with SQL</p>
+      </div>
+
+      <div class="main-content">
+        <!-- Create/Edit Task Form -->
+        <div class="card">
+          <h2 id="form-title">Create New Task</h2>
+          <form id="task-form">
+            <input type="hidden" id="task-id" />
+
+            <div class="form-group">
+              <label for="title">Title *</label>
+              <input type="text" id="title" required />
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status">
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submit-btn">
+              Create Task
+            </button>
+            <button
+              type="button"
+              class="btn"
+              id="cancel-btn"
+              style="display: none; margin-left: 10px"
+            >
+              Cancel
+            </button>
+          </form>
+        </div>
+
+        <!-- SQL Executor -->
+        <div class="card sql-executor">
+          <h2>🔧 SQL Executor</h2>
+          <div class="form-group">
+            <label for="sql-input">Enter SQL Query</label>
+            <textarea
+              id="sql-input"
+              placeholder="SELECT * FROM tasks WHERE status = 'pending'"
+            ></textarea>
+          </div>
+          <button type="button" class="btn btn-success" id="execute-sql">
+            Execute Query
+          </button>
+          <div id="sql-result"></div>
+        </div>
+
+        <!-- Tasks List -->
+        <div class="card tasks-list">
+          <h2>All Tasks</h2>
+          <div id="tasks-container">
+            <div class="loading">Loading tasks...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let editingTaskId = null;
+
+      // Load tasks on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        loadTasks();
+      });
+
+      // Load all tasks
+      async function loadTasks() {
+        try {
+          const response = await fetch("/api/tasks");
+          const result = await response.json();
+
+          const container = document.getElementById("tasks-container");
+
+          if (result.success && result.data.length > 0) {
+            container.innerHTML = result.data
+              .map(
+                (task) => `
+                        <div class="task-item">
+                            <div class="task-content">
+                                <div class="task-title">${escapeHtml(
+                                  task.title
+                                )}</div>
+                                <div class="task-description">${escapeHtml(
+                                  task.description || "No description"
+                                )}</div>
+                                <div class="task-meta">
+                                    <span class="status-badge status-${
+                                      task.status
+                                    }">${task.status.replace("_", " ")}</span>
+                                    <span>Created: ${task.created_at}</span>
+                                    <span>ID: ${task.id}</span>
+                                </div>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn btn-edit" onclick="editTask(${
+                                  task.id
+                                })">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteTask(${
+                                  task.id
+                                })">Delete</button>
+                            </div>
+                        </div>
+                    `
+              )
+              .join("");
+          } else {
+            container.innerHTML =
+              '<div class="empty-state">No tasks found. Create your first task!</div>';
+          }
+        } catch (error) {
+          console.error("Error loading tasks:", error);
+          document.getElementById("tasks-container").innerHTML =
+            '<div class="empty-state">Error loading tasks</div>';
+        }
+      }
+
+      // Create or update task
+      document
+        .getElementById("task-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const title = document.getElementById("title").value;
+          const description = document.getElementById("description").value;
+          const status = document.getElementById("status").value;
+
+          try {
+            const taskData = { title, description, status };
+
+            let response;
+            if (editingTaskId) {
+              response = await fetch(`/api/tasks/${editingTaskId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(taskData),
+              });
+            } else {
+              response = await fetch("/api/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(taskData),
+              });
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+              resetForm();
+              loadTasks();
+            } else {
+              alert("Error: " + result.error);
+            }
+          } catch (error) {
+            console.error("Error saving task:", error);
+            alert("Error saving task");
+          }
+        });
+
+      // Edit task
+      async function editTask(id) {
+        try {
+          const response = await fetch(`/api/tasks/${id}`);
+          const result = await response.json();
+
+          if (result.success) {
+            const task = result.data;
+            editingTaskId = id;
+
+            document.getElementById("task-id").value = id;
+            document.getElementById("title").value = task.title;
+            document.getElementById("description").value =
+              task.description || "";
+            document.getElementById("status").value = task.status;
+
+            document.getElementById("form-title").textContent = "Edit Task";
+            document.getElementById("submit-btn").textContent = "Update Task";
+            document.getElementById("cancel-btn").style.display =
+              "inline-block";
+          }
+        } catch (error) {
+          console.error("Error loading task:", error);
+        }
+      }
+
+      // Delete task
+      async function deleteTask(id) {
+        if (!confirm("Are you sure you want to delete this task?")) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/tasks/${id}`, {
+            method: "DELETE",
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            loadTasks();
+          } else {
+            alert("Error: " + result.error);
+          }
+        } catch (error) {
+          console.error("Error deleting task:", error);
+          alert("Error deleting task");
+        }
+      }
+
+      // Cancel edit
+      document
+        .getElementById("cancel-btn")
+        .addEventListener("click", resetForm);
+
+      function resetForm() {
+        editingTaskId = null;
+        document.getElementById("task-form").reset();
+        document.getElementById("task-id").value = "";
+        document.getElementById("form-title").textContent = "Create New Task";
+        document.getElementById("submit-btn").textContent = "Create Task";
+        document.getElementById("cancel-btn").style.display = "none";
+      }
+
+      // Execute SQL
+      document
+        .getElementById("execute-sql")
+        .addEventListener("click", async () => {
+          const sql = document.getElementById("sql-input").value;
+
+          if (!sql.trim()) {
+            alert("Please enter a SQL query");
+            return;
+          }
+
+          try {
+            const response = await fetch("/api/query", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sql }),
+            });
+
+            const result = await response.json();
+
+            const resultDiv = document.getElementById("sql-result");
+            resultDiv.className = "sql-result";
+            resultDiv.innerHTML = `<pre>${JSON.stringify(
+              result,
+              null,
+              2
+            )}</pre>`;
+
+            // Reload tasks if it was a mutation query
+            if (
+              sql.trim().toUpperCase().startsWith("INSERT") ||
+              sql.trim().toUpperCase().startsWith("UPDATE") ||
+              sql.trim().toUpperCase().startsWith("DELETE")
+            ) {
+              loadTasks();
+            }
+          } catch (error) {
+            console.error("Error executing SQL:", error);
+            document.getElementById(
+              "sql-result"
+            ).innerHTML = `<pre>Error: ${error.message}</pre>`;
+          }
+        });
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    </script>
+  </body>
+</html>
