@@ -12,6 +12,12 @@ A lightweight, file-based relational database management system built with Node.
 - **REPL**: Interactive command-line interface
 - **REST API**: Express server with query endpoints
 
+## Technologies Used
+
+- **Node.js** - JavaScript runtime environment
+- **Express.js** - Web framework for REST API
+- **Vanilla JavaScript** - No external SQL libraries!
+
 ## Installation
 
 ```bash
@@ -210,6 +216,80 @@ Tables are stored as JSON files in the `data/` directory:
 
 - `PRIMARY KEY` - Unique identifier with index
 - `UNIQUE` - Unique values with index
+
+## Design Decisions
+
+### Factory Functions Over Classes
+
+The project uses factory functions instead of ES6 classes for several reasons:
+
+- **Simplicity**: Easier to understand and debug
+- **Flexibility**: Objects can be created without inheritance hierarchies
+- **Functional Programming**: Aligns with a functional programming paradigm
+- **No `new` keyword**: Reduces boilerplate and potential errors
+
+### File-Based Storage
+
+Instead of a complex database engine:
+
+- **JSON format**: Human-readable and easy to inspect
+- **Single files per table**: Clear separation of data
+- **Metadata files**: Store schema information separately
+- **Simple indexing**: Index files for fast lookups on primary/unique keys
+
+### SQL Parser Design
+
+The parser uses regular expressions and string matching:
+
+- **No external dependencies**: Self-contained parser
+- **Pattern-based matching**: Recognizes SQL keywords and structure
+- **Limited but functional**: Supports core SQL operations
+- **Extensible**: Easy to add new SQL commands
+
+### JOIN Implementation
+
+JOINs work by:
+
+1. **Parsing join conditions**: Extracting table names and column references
+2. **Loading both tables**: Reading data from JSON files
+3. **Cross-product matching**: Comparing rows from both tables
+4. **Column aliasing**: Using qualified names like `books.title` to avoid conflicts
+
+### Index Management
+
+Indexing strategy:
+
+- **Separate index files**: One file per indexed column
+- **Primary key indexes**: Enforce uniqueness and provide fast lookups
+- **Unique constraints**: Similar indexing as primary keys
+- **JSON-based**: Same format as data for consistency
+
+### Web Interface
+
+The web application demonstrates:
+
+- **Task Manager**: Shows basic CRUD operations
+- **SQL Executor**: Allows running custom queries directly
+- **Separated concerns**: HTML, CSS, and JavaScript in separate files
+- **REST API**: Express server provides clean API endpoints
+
+### AI Assistance & Transparency
+
+This project was developed with AI assistance (GitHub Copilot). However, the code has been:
+
+- **Thoroughly understood**: Every component was reviewed and tested
+- **Actively modified**: Code was refactored, fixed, and debugged based on actual requirements
+- **Debugged in production**: Issues like JOIN column mapping and data directory paths were diagnosed and resolved
+- **Tested extensively**: Manual testing and test suite creation verified functionality
+
+### Key Learning Outcomes
+
+- **SQL Query Execution**: Understanding how to parse and execute SQL without external libraries
+- **JOIN Operations**: Complex multi-table operations and column aliasing
+- **File-based persistence**: Designing a storage system with metadata and indexes
+- **Factory Pattern**: Converting from OOP to functional programming patterns
+- **Debugging**: Using logging and network inspection to identify issues
+- **Separation of Concerns**: Keeping business logic separate from web presentation
 
 ## License
 
