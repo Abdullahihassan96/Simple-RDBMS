@@ -1,0 +1,32 @@
+{
+  "rows": [
+    {
+      "id": 1,
+      "title": "Build RDBMS",
+      "description": "Complete the Pesapal challenge",
+      "status": "completed",
+      "created_at": "2026-01-10"
+    },
+    {
+      "id": 2,
+      "title": "Write Documentation",
+      "description": "Document the implementation",
+      "status": "in_progress",
+      "created_at": "2026-01-10"
+    },
+    {
+      "id": 3,
+      "title": "Code review",
+      "description": "Peer code review ",
+      "status": "pending",
+      "created_at": "2026-01-10"
+    },
+    {
+      "id": 4,
+      "title": "New Tech Stack",
+      "description": "Learning new tech stack",
+      "status": "pending",
+      "created_at": "2026-01-13"
+    }
+  ]
+}

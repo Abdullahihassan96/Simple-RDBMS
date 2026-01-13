@@ -1,25 +1,21 @@
-class QueryExecutor {
-  constructor(database) {
-    this.db = database;
-  }
-
+function createQueryExecutor(database) {
   /**
    * Execute a parsed query
    */
-  execute(parsedQuery) {
+  function execute(parsedQuery) {
     switch (parsedQuery.type) {
       case "CREATE_TABLE":
-        return this.executeCreateTable(parsedQuery);
+        return executeCreateTable(parsedQuery);
       case "INSERT":
-        return this.executeInsert(parsedQuery);
+        return executeInsert(parsedQuery);
       case "SELECT":
-        return this.executeSelect(parsedQuery);
+        return executeSelect(parsedQuery);
       case "UPDATE":
-        return this.executeUpdate(parsedQuery);
+        return executeUpdate(parsedQuery);
       case "DELETE":
-        return this.executeDelete(parsedQuery);
+        return executeDelete(parsedQuery);
       case "DROP_TABLE":
-        return this.executeDropTable(parsedQuery);
+        return executeDropTable(parsedQuery);
       default:
         throw new Error(`Unknown query type: ${parsedQuery.type}`);
     }
@@ -28,8 +24,8 @@ class QueryExecutor {
   /**
    * Execute CREATE TABLE
    */
-  executeCreateTable(query) {
-    const table = this.db.createTable(query.tableName, query.schema);
+  function executeCreateTable(query) {
+    const table = database.createTable(query.tableName, query.schema);
     return {
       success: true,
       message: `Table '${query.tableName}' created successfully`,
@@ -40,12 +36,12 @@ class QueryExecutor {
   /**
    * Execute INSERT
    */
-  executeInsert(query) {
-    const table = this.db.getTable(query.tableName);
+  function executeInsert(query) {
+    const table = database.getTable(query.tableName);
     const row = table.insert(query.row);
 
     // Rebuild indexes
-    this.db.rebuildIndexes(query.tableName);
+    database.rebuildIndexes(query.tableName);
 
     return {
       success: true,
@@ -57,17 +53,17 @@ class QueryExecutor {
   /**
    * Execute SELECT
    */
-  executeSelect(query) {
+  function executeSelect(query) {
     if (query.join) {
-      return this.executeJoin(query);
+      return executeJoin(query);
     }
 
-    const table = this.db.getTable(query.tableName);
+    const table = database.getTable(query.tableName);
     let rows = table.getAll();
 
     // Apply WHERE clause
     if (query.where) {
-      rows = this.filterRows(rows, query.where, query.tableName);
+      rows = filterRows(rows, query.where, query.tableName);
     }
 
     // Project columns
@@ -91,9 +87,9 @@ class QueryExecutor {
   /**
    * Execute SELECT with JOIN
    */
-  executeJoin(query) {
-    const leftTable = this.db.getTable(query.tableName);
-    const rightTable = this.db.getTable(query.join.tableName);
+  function executeJoin(query) {
+    const leftTable = database.getTable(query.tableName);
+    const rightTable = database.getTable(query.join.tableName);
 
     const leftRows = leftTable.getAll();
     const rightRows = rightTable.getAll();
@@ -170,17 +166,17 @@ class QueryExecutor {
   /**
    * Execute UPDATE
    */
-  executeUpdate(query) {
-    const table = this.db.getTable(query.tableName);
+  function executeUpdate(query) {
+    const table = database.getTable(query.tableName);
 
     const condition = query.where
-      ? (row) => this.evaluateCondition(row, query.where)
+      ? (row) => evaluateCondition(row, query.where)
       : null;
 
     const count = table.update(query.updates, condition);
 
     // Rebuild indexes
-    this.db.rebuildIndexes(query.tableName);
+    database.rebuildIndexes(query.tableName);
 
     return {
       success: true,
@@ -192,17 +188,17 @@ class QueryExecutor {
   /**
    * Execute DELETE
    */
-  executeDelete(query) {
-    const table = this.db.getTable(query.tableName);
+  function executeDelete(query) {
+    const table = database.getTable(query.tableName);
 
     const condition = query.where
-      ? (row) => this.evaluateCondition(row, query.where)
+      ? (row) => evaluateCondition(row, query.where)
       : () => true; // Delete all if no WHERE clause
 
     const count = table.delete(condition);
 
     // Rebuild indexes
-    this.db.rebuildIndexes(query.tableName);
+    database.rebuildIndexes(query.tableName);
 
     return {
       success: true,
@@ -214,8 +210,8 @@ class QueryExecutor {
   /**
    * Execute DROP TABLE
    */
-  executeDropTable(query) {
-    this.db.dropTable(query.tableName);
+  function executeDropTable(query) {
+    database.dropTable(query.tableName);
     return {
       success: true,
       message: `Table '${query.tableName}' dropped successfully`,
@@ -225,10 +221,10 @@ class QueryExecutor {
   /**
    * Filter rows based on WHERE clause (with index optimization)
    */
-  filterRows(rows, whereClause, tableName) {
+  function filterRows(rows, whereClause, tableName) {
     // Try to use index for simple equality conditions
     if (whereClause.column && whereClause.operator === "=") {
-      const indices = this.db.indexManager.lookup(
+      const indices = database.indexManager.lookup(
         tableName,
         whereClause.column,
         whereClause.value
@@ -241,19 +237,19 @@ class QueryExecutor {
     }
 
     // Fall back to full table scan
-    return rows.filter((row) => this.evaluateCondition(row, whereClause));
+    return rows.filter((row) => evaluateCondition(row, whereClause));
   }
 
   /**
    * Evaluate a condition against a row
    */
-  evaluateCondition(row, condition) {
+  function evaluateCondition(row, condition) {
     if (condition.type === "AND") {
-      return condition.conditions.every((c) => this.evaluateCondition(row, c));
+      return condition.conditions.every((c) => evaluateCondition(row, c));
     }
 
     if (condition.type === "OR") {
-      return condition.conditions.some((c) => this.evaluateCondition(row, c));
+      return condition.conditions.some((c) => evaluateCondition(row, c));
     }
 
     const value = row[condition.column];
@@ -276,6 +272,20 @@ class QueryExecutor {
         throw new Error(`Unknown operator: ${condition.operator}`);
     }
   }
+
+  return {
+    db: database,
+    execute,
+    executeCreateTable,
+    executeInsert,
+    executeSelect,
+    executeJoin,
+    executeUpdate,
+    executeDelete,
+    executeDropTable,
+    filterRows,
+    evaluateCondition,
+  };
 }
 
-module.exports = QueryExecutor;
+module.exports = createQueryExecutor;

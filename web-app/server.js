@@ -1,9 +1,9 @@
 const express = require("express");
 const path = require("path");
-const Database = require("../src/Database");
+const createDatabase = require("../src/Database");
 
 const app = express();
-const db = new Database("./data");
+const db = createDatabase("./data");
 const PORT = 3000;
 
 // Middleware

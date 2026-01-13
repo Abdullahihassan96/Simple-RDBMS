@@ -1,20 +1,18 @@
 const readline = require("readline");
-const Database = require("../Database");
+const createDatabase = require("../Database");
 
-class REPL {
-  constructor() {
-    this.db = new Database("./data");
-    this.rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      prompt: "mydb> ",
-    });
-  }
+function createREPL() {
+  const db = createDatabase("./data");
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: "mydb> ",
+  });
 
   /**
    * Start the REPL
    */
-  start() {
+  function start() {
     console.log("========================================");
     console.log("  Simple RDBMS - Interactive Mode");
     console.log("========================================");
@@ -22,22 +20,22 @@ class REPL {
     console.log("Type .help for available commands.");
     console.log("Type .exit to quit.\n");
 
-    this.rl.prompt();
+    rl.prompt();
 
-    this.rl.on("line", (line) => {
+    rl.on("line", (line) => {
       const input = line.trim();
 
       // Handle special commands
       if (input.startsWith(".")) {
-        this.handleSpecialCommand(input);
+        handleSpecialCommand(input);
       } else if (input) {
-        this.executeSQL(input);
+        executeSQL(input);
       }
 
-      this.rl.prompt();
+      rl.prompt();
     });
 
-    this.rl.on("close", () => {
+    rl.on("close", () => {
       console.log("\nGoodbye!");
       process.exit(0);
     });
@@ -46,34 +44,34 @@ class REPL {
   /**
    * Handle special dot commands
    */
-  handleSpecialCommand(command) {
+  function handleSpecialCommand(command) {
     const parts = command.split(/\s+/);
     const cmd = parts[0].toLowerCase();
 
     switch (cmd) {
       case ".help":
-        this.showHelp();
+        showHelp();
         break;
 
       case ".tables":
-        this.showTables();
+        showTables();
         break;
 
       case ".schema":
         if (parts[1]) {
-          this.showSchema(parts[1]);
+          showSchema(parts[1]);
         } else {
           console.log("Usage: .schema <table_name>");
         }
         break;
 
       case ".stats":
-        this.showStats();
+        showStats();
         break;
 
       case ".exit":
       case ".quit":
-        this.rl.close();
+        rl.close();
         break;
 
       default:
@@ -85,15 +83,15 @@ class REPL {
   /**
    * Execute SQL command
    */
-  executeSQL(sql) {
+  function executeSQL(sql) {
     const startTime = Date.now();
-    const result = this.db.query(sql);
+    const result = db.query(sql);
     const duration = Date.now() - startTime;
 
     if (result.success) {
       if (result.rows) {
         // SELECT query
-        this.displayResults(result.rows);
+        displayResults(result.rows);
         console.log(`\n${result.count} row(s) in ${duration}ms`);
       } else {
         // Other queries
@@ -108,7 +106,7 @@ class REPL {
   /**
    * Display query results in table format
    */
-  displayResults(rows) {
+  function displayResults(rows) {
     if (rows.length === 0) {
       console.log("No results.");
       return;
@@ -149,7 +147,7 @@ class REPL {
   /**
    * Show help message
    */
-  showHelp() {
+  function showHelp() {
     console.log("\nAvailable Commands:");
     console.log("  .help              - Show this help message");
     console.log("  .tables            - List all tables");
@@ -169,16 +167,16 @@ class REPL {
   /**
    * Show all tables
    */
-  showTables() {
-    const tables = this.db.listTables();
+  function showTables() {
+    const tablesList = db.listTables();
 
-    if (tables.length === 0) {
+    if (tablesList.length === 0) {
       console.log("No tables found.");
       return;
     }
 
     console.log("\nTables:");
-    for (const table of tables) {
+    for (const table of tablesList) {
       console.log(`  - ${table}`);
     }
   }
@@ -186,9 +184,9 @@ class REPL {
   /**
    * Show table schema
    */
-  showSchema(tableName) {
+  function showSchema(tableName) {
     try {
-      const metadata = this.db.storage.getTableMetadata(tableName);
+      const metadata = db.storage.getTableMetadata(tableName);
 
       console.log(`\nTable: ${tableName}`);
       console.log("Columns:");
@@ -214,8 +212,8 @@ class REPL {
   /**
    * Show database statistics
    */
-  showStats() {
-    const stats = this.db.getStats();
+  function showStats() {
+    const stats = db.getStats();
 
     console.log("\nDatabase Statistics:");
     console.log(`Total Tables: ${stats.tableCount}`);
@@ -233,12 +231,25 @@ class REPL {
       }
     }
   }
+
+  return {
+    db,
+    rl,
+    start,
+    handleSpecialCommand,
+    executeSQL,
+    displayResults,
+    showHelp,
+    showTables,
+    showSchema,
+    showStats,
+  };
 }
 
 // Run REPL if this file is executed directly
 if (require.main === module) {
-  const repl = new REPL();
+  const repl = createREPL();
   repl.start();
 }
 
-module.exports = REPL;
+module.exports = createREPL;

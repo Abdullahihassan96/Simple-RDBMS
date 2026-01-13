@@ -1,14 +1,8 @@
-class Table {
-  constructor(tableName, metadata, storageEngine) {
-    this.tableName = tableName;
-    this.metadata = metadata;
-    this.storage = storageEngine;
-  }
-
+function createTable(tableName, metadata, storageEngine) {
   /**
    * Validate data type
    */
-  validateType(value, type) {
+  function validateType(value, type) {
     switch (type.toUpperCase()) {
       case "INTEGER":
       case "INT":
@@ -32,7 +26,7 @@ class Table {
   /**
    * Coerce value to the correct type
    */
-  coerceType(value, type) {
+  function coerceType(value, type) {
     if (value === null || value === undefined) return null;
 
     switch (type.toUpperCase()) {
@@ -57,11 +51,11 @@ class Table {
   /**
    * Validate a row against the schema
    */
-  validateRow(row) {
+  function validateRow(row) {
     const errors = [];
 
     // Check all columns
-    for (const column of this.metadata.columns) {
+    for (const column of metadata.columns) {
       const value = row[column.name];
 
       // Check NOT NULL constraint
@@ -73,7 +67,7 @@ class Table {
 
       // Check type if value is present
       if (value !== null && value !== undefined) {
-        if (!this.validateType(value, column.type)) {
+        if (!validateType(value, column.type)) {
           errors.push(
             `Invalid type for column '${column.name}'. Expected ${column.type}`
           );
@@ -91,10 +85,10 @@ class Table {
   /**
    * Validate PRIMARY KEY constraint
    */
-  validatePrimaryKey(row, existingRows) {
-    if (!this.metadata.primaryKey) return true;
+  function validatePrimaryKey(row, existingRows) {
+    if (!metadata.primaryKey) return true;
 
-    const pkColumn = this.metadata.primaryKey;
+    const pkColumn = metadata.primaryKey;
     const pkValue = row[pkColumn];
 
     if (pkValue === null || pkValue === undefined) {
@@ -113,12 +107,12 @@ class Table {
   /**
    * Validate UNIQUE constraints
    */
-  validateUniqueKeys(row, existingRows) {
-    if (!this.metadata.uniqueKeys || this.metadata.uniqueKeys.length === 0) {
+  function validateUniqueKeys(row, existingRows) {
+    if (!metadata.uniqueKeys || metadata.uniqueKeys.length === 0) {
       return true;
     }
 
-    for (const uniqueKey of this.metadata.uniqueKeys) {
+    for (const uniqueKey of metadata.uniqueKeys) {
       const value = row[uniqueKey];
 
       if (value !== null && value !== undefined) {
@@ -137,14 +131,14 @@ class Table {
   /**
    * Prepare row by coercing types and adding defaults
    */
-  prepareRow(row) {
+  function prepareRow(row) {
     const preparedRow = {};
 
-    for (const column of this.metadata.columns) {
+    for (const column of metadata.columns) {
       const value = row[column.name];
 
       if (value !== undefined) {
-        preparedRow[column.name] = this.coerceType(value, column.type);
+        preparedRow[column.name] = coerceType(value, column.type);
       } else {
         preparedRow[column.name] = null;
       }
@@ -156,34 +150,34 @@ class Table {
   /**
    * Insert a row with full validation
    */
-  insert(row) {
+  function insert(row) {
     // Prepare row
-    const preparedRow = this.prepareRow(row);
+    const preparedRow = prepareRow(row);
 
     // Load existing rows
-    const existingRows = this.storage.loadTableData(this.tableName);
+    const existingRows = storageEngine.loadTableData(tableName);
 
     // Validate
-    this.validateRow(preparedRow);
-    this.validatePrimaryKey(preparedRow, existingRows);
-    this.validateUniqueKeys(preparedRow, existingRows);
+    validateRow(preparedRow);
+    validatePrimaryKey(preparedRow, existingRows);
+    validateUniqueKeys(preparedRow, existingRows);
 
     // Insert
-    return this.storage.insertRow(this.tableName, preparedRow);
+    return storageEngine.insertRow(tableName, preparedRow);
   }
 
   /**
    * Get all rows
    */
-  getAll() {
-    return this.storage.loadTableData(this.tableName);
+  function getAll() {
+    return storageEngine.loadTableData(tableName);
   }
 
   /**
    * Update rows matching a condition
    */
-  update(updates, condition) {
-    const rows = this.storage.loadTableData(this.tableName);
+  function update(updates, condition) {
+    const rows = storageEngine.loadTableData(tableName);
     let updatedCount = 0;
 
     const newRows = rows.map((row) => {
@@ -194,21 +188,37 @@ class Table {
       return row;
     });
 
-    this.storage.saveTableData(this.tableName, newRows);
+    storageEngine.saveTableData(tableName, newRows);
     return updatedCount;
   }
 
   /**
    * Delete rows matching a condition
    */
-  delete(condition) {
-    const rows = this.storage.loadTableData(this.tableName);
+  function deleteRows(condition) {
+    const rows = storageEngine.loadTableData(tableName);
     const newRows = rows.filter((row) => !condition(row));
     const deletedCount = rows.length - newRows.length;
 
-    this.storage.saveTableData(this.tableName, newRows);
+    storageEngine.saveTableData(tableName, newRows);
     return deletedCount;
   }
+
+  return {
+    tableName,
+    metadata,
+    storage: storageEngine,
+    validateType,
+    coerceType,
+    validateRow,
+    validatePrimaryKey,
+    validateUniqueKeys,
+    prepareRow,
+    insert,
+    getAll,
+    update,
+    delete: deleteRows,
+  };
 }
 
-module.exports = Table;
+module.exports = createTable;

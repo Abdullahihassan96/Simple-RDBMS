@@ -1,28 +1,28 @@
-const StorageEngine = require("./storage/StorageEngine");
-const Table = require("./storage/Table");
-const SQLParser = require("./parser/SQLParser");
-const QueryExecutor = require("./executor/QueryExecutor");
-const IndexManager = require("./index/IndexManager");
+const createStorageEngine = require("./storage/StorageEngine");
+const createTable = require("./storage/Table");
+const createSQLParser = require("./parser/SQLParser");
+const createQueryExecutor = require("./executor/QueryExecutor");
+const createIndexManager = require("./index/IndexManager");
 
-class Database {
-  constructor(dataDir = "./data") {
-    this.storage = new StorageEngine(dataDir);
-    this.parser = new SQLParser();
-    this.executor = new QueryExecutor(this);
-    this.indexManager = new IndexManager(dataDir);
-    this.tables = new Map();
-  }
+function createDatabase(dataDir = "./data") {
+  const storage = createStorageEngine(dataDir);
+  const parser = createSQLParser();
+  const indexManager = createIndexManager(dataDir);
+  const tables = new Map();
+
+  // Create executor after defining the database object
+  let executor;
 
   /**
    * Execute a SQL query
    */
-  query(sql) {
+  function query(sql) {
     try {
       // Parse SQL
-      const parsedQuery = this.parser.parse(sql);
+      const parsedQuery = parser.parse(sql);
 
       // Execute query
-      const result = this.executor.execute(parsedQuery);
+      const result = executor.execute(parsedQuery);
 
       return result;
     } catch (error) {
@@ -36,13 +36,13 @@ class Database {
   /**
    * Create a new table
    */
-  createTable(tableName, schema) {
-    const metadata = this.storage.createTable(tableName, schema);
-    const table = new Table(tableName, metadata, this.storage);
-    this.tables.set(tableName, table);
+  function createTableFunc(tableName, schema) {
+    const metadata = storage.createTable(tableName, schema);
+    const table = createTable(tableName, metadata, storage);
+    tables.set(tableName, table);
 
     // Create indexes for primary and unique keys
-    this.indexManager.createDefaultIndexes(tableName, metadata, []);
+    indexManager.createDefaultIndexes(tableName, metadata, []);
 
     return table;
   }
@@ -50,16 +50,16 @@ class Database {
   /**
    * Get a table instance
    */
-  getTable(tableName) {
+  function getTable(tableName) {
     // Check cache
-    if (this.tables.has(tableName)) {
-      return this.tables.get(tableName);
+    if (tables.has(tableName)) {
+      return tables.get(tableName);
     }
 
     // Load from storage
-    const metadata = this.storage.getTableMetadata(tableName);
-    const table = new Table(tableName, metadata, this.storage);
-    this.tables.set(tableName, table);
+    const metadata = storage.getTableMetadata(tableName);
+    const table = createTable(tableName, metadata, storage);
+    tables.set(tableName, table);
 
     return table;
   }
@@ -67,46 +67,46 @@ class Database {
   /**
    * Drop a table
    */
-  dropTable(tableName) {
+  function dropTable(tableName) {
     // Drop indexes
-    const metadata = this.storage.getTableMetadata(tableName);
+    const metadata = storage.getTableMetadata(tableName);
 
     if (metadata.primaryKey) {
-      this.indexManager.dropIndex(tableName, metadata.primaryKey);
+      indexManager.dropIndex(tableName, metadata.primaryKey);
     }
 
     if (metadata.uniqueKeys) {
       for (const uniqueKey of metadata.uniqueKeys) {
-        this.indexManager.dropIndex(tableName, uniqueKey);
+        indexManager.dropIndex(tableName, uniqueKey);
       }
     }
 
     // Drop table
-    this.storage.dropTable(tableName);
-    this.tables.delete(tableName);
+    storage.dropTable(tableName);
+    tables.delete(tableName);
   }
 
   /**
    * List all tables
    */
-  listTables() {
-    return this.storage.listTables();
+  function listTables() {
+    return storage.listTables();
   }
 
   /**
    * Rebuild indexes for a table
    */
-  rebuildIndexes(tableName) {
-    const metadata = this.storage.getTableMetadata(tableName);
-    const rows = this.storage.loadTableData(tableName);
+  function rebuildIndexes(tableName) {
+    const metadata = storage.getTableMetadata(tableName);
+    const rows = storage.loadTableData(tableName);
 
     if (metadata.primaryKey) {
-      this.indexManager.rebuildIndex(tableName, metadata.primaryKey, rows);
+      indexManager.rebuildIndex(tableName, metadata.primaryKey, rows);
     }
 
     if (metadata.uniqueKeys) {
       for (const uniqueKey of metadata.uniqueKeys) {
-        this.indexManager.rebuildIndex(tableName, uniqueKey, rows);
+        indexManager.rebuildIndex(tableName, uniqueKey, rows);
       }
     }
   }
@@ -114,16 +114,16 @@ class Database {
   /**
    * Get database statistics
    */
-  getStats() {
-    const tables = this.listTables();
+  function getStats() {
+    const tablesList = listTables();
     const stats = {
-      tableCount: tables.length,
+      tableCount: tablesList.length,
       tables: {},
     };
 
-    for (const tableName of tables) {
-      const rows = this.storage.loadTableData(tableName);
-      const metadata = this.storage.getTableMetadata(tableName);
+    for (const tableName of tablesList) {
+      const rows = storage.loadTableData(tableName);
+      const metadata = storage.getTableMetadata(tableName);
 
       stats.tables[tableName] = {
         rowCount: rows.length,
@@ -134,6 +134,27 @@ class Database {
 
     return stats;
   }
+
+  // Create the database object
+  const db = {
+    storage,
+    parser,
+    indexManager,
+    tables,
+    query,
+    createTable: createTableFunc,
+    getTable,
+    dropTable,
+    listTables,
+    rebuildIndexes,
+    getStats,
+  };
+
+  // Now initialize executor with the database object
+  executor = createQueryExecutor(db);
+  db.executor = executor;
+
+  return db;
 }
 
-module.exports = Database;
+module.exports = createDatabase;

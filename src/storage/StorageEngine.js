@@ -1,44 +1,41 @@
 const fs = require("fs");
 const path = require("path");
 
-class StorageEngine {
-  constructor(dataDir = "./data") {
-    this.dataDir = dataDir;
-    // Create data directory if it doesn't exist
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
+function createStorageEngine(dataDir = "./data") {
+  // Create data directory if it doesn't exist
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
 
   /**
    * Get the file path for a table
    */
-  getTablePath(tableName) {
-    return path.join(this.dataDir, `${tableName}.json`);
+  function getTablePath(tableName) {
+    return path.join(dataDir, `${tableName}.json`);
   }
 
   /**
    * Get the metadata file path for a table
    */
-  getMetaPath(tableName) {
-    return path.join(this.dataDir, `${tableName}.meta.json`);
+  function getMetaPath(tableName) {
+    return path.join(dataDir, `${tableName}.meta.json`);
   }
 
   /**
    * Check if a table exists
    */
-  tableExists(tableName) {
+  function tableExists(tableName) {
     return (
-      fs.existsSync(this.getTablePath(tableName)) &&
-      fs.existsSync(this.getMetaPath(tableName))
+      fs.existsSync(getTablePath(tableName)) &&
+      fs.existsSync(getMetaPath(tableName))
     );
   }
 
   /**
    * Create a new table with schema
    */
-  createTable(tableName, schema) {
-    if (this.tableExists(tableName)) {
+  function createTable(tableName, schema) {
+    if (tableExists(tableName)) {
       throw new Error(`Table '${tableName}' already exists`);
     }
 
@@ -51,14 +48,11 @@ class StorageEngine {
       createdAt: new Date().toISOString(),
     };
 
-    fs.writeFileSync(
-      this.getMetaPath(tableName),
-      JSON.stringify(metadata, null, 2)
-    );
+    fs.writeFileSync(getMetaPath(tableName), JSON.stringify(metadata, null, 2));
 
     // Write empty data file
     fs.writeFileSync(
-      this.getTablePath(tableName),
+      getTablePath(tableName),
       JSON.stringify({ rows: [] }, null, 2)
     );
 
@@ -68,37 +62,37 @@ class StorageEngine {
   /**
    * Load table metadata
    */
-  getTableMetadata(tableName) {
-    if (!this.tableExists(tableName)) {
+  function getTableMetadata(tableName) {
+    if (!tableExists(tableName)) {
       throw new Error(`Table '${tableName}' does not exist`);
     }
 
-    const metaData = fs.readFileSync(this.getMetaPath(tableName), "utf8");
+    const metaData = fs.readFileSync(getMetaPath(tableName), "utf8");
     return JSON.parse(metaData);
   }
 
   /**
    * Load all rows from a table
    */
-  loadTableData(tableName) {
-    if (!this.tableExists(tableName)) {
+  function loadTableData(tableName) {
+    if (!tableExists(tableName)) {
       throw new Error(`Table '${tableName}' does not exist`);
     }
 
-    const data = fs.readFileSync(this.getTablePath(tableName), "utf8");
+    const data = fs.readFileSync(getTablePath(tableName), "utf8");
     return JSON.parse(data).rows;
   }
 
   /**
    * Save rows to a table
    */
-  saveTableData(tableName, rows) {
-    if (!this.tableExists(tableName)) {
+  function saveTableData(tableName, rows) {
+    if (!tableExists(tableName)) {
       throw new Error(`Table '${tableName}' does not exist`);
     }
 
     fs.writeFileSync(
-      this.getTablePath(tableName),
+      getTablePath(tableName),
       JSON.stringify({ rows }, null, 2)
     );
   }
@@ -106,35 +100,49 @@ class StorageEngine {
   /**
    * Insert a single row
    */
-  insertRow(tableName, row) {
-    const rows = this.loadTableData(tableName);
+  function insertRow(tableName, row) {
+    const rows = loadTableData(tableName);
     rows.push(row);
-    this.saveTableData(tableName, rows);
+    saveTableData(tableName, rows);
     return row;
   }
 
   /**
    * Delete table
    */
-  dropTable(tableName) {
-    if (!this.tableExists(tableName)) {
+  function dropTable(tableName) {
+    if (!tableExists(tableName)) {
       throw new Error(`Table '${tableName}' does not exist`);
     }
 
-    fs.unlinkSync(this.getTablePath(tableName));
-    fs.unlinkSync(this.getMetaPath(tableName));
+    fs.unlinkSync(getTablePath(tableName));
+    fs.unlinkSync(getMetaPath(tableName));
   }
 
   /**
    * List all tables
    */
-  listTables() {
-    const files = fs.readdirSync(this.dataDir);
+  function listTables() {
+    const files = fs.readdirSync(dataDir);
     const tables = files
       .filter((f) => f.endsWith(".meta.json"))
       .map((f) => f.replace(".meta.json", ""));
     return tables;
   }
+
+  return {
+    dataDir,
+    getTablePath,
+    getMetaPath,
+    tableExists,
+    createTable,
+    getTableMetadata,
+    loadTableData,
+    saveTableData,
+    insertRow,
+    dropTable,
+    listTables,
+  };
 }
 
-module.exports = StorageEngine;
+module.exports = createStorageEngine;

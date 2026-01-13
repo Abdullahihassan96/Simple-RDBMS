@@ -1,23 +1,20 @@
 const fs = require("fs");
 const path = require("path");
 
-class IndexManager {
-  constructor(dataDir = "./data") {
-    this.dataDir = dataDir;
-    this.indexes = new Map(); // In-memory index cache
-  }
+function createIndexManager(dataDir = "./data") {
+  const indexes = new Map(); // In-memory index cache
 
   /**
    * Get index file path
    */
-  getIndexPath(tableName, columnName) {
-    return path.join(this.dataDir, `${tableName}_${columnName}.idx.json`);
+  function getIndexPath(tableName, columnName) {
+    return path.join(dataDir, `${tableName}_${columnName}.idx.json`);
   }
 
   /**
    * Build a hash index for a column
    */
-  buildIndex(tableName, columnName, rows) {
+  function buildIndex(tableName, columnName, rows) {
     const index = new Map();
 
     rows.forEach((row, rowIndex) => {
@@ -40,13 +37,13 @@ class IndexManager {
     };
 
     fs.writeFileSync(
-      this.getIndexPath(tableName, columnName),
+      getIndexPath(tableName, columnName),
       JSON.stringify(indexData, null, 2)
     );
 
     // Cache in memory
     const cacheKey = `${tableName}.${columnName}`;
-    this.indexes.set(cacheKey, index);
+    indexes.set(cacheKey, index);
 
     return index;
   }
@@ -54,16 +51,16 @@ class IndexManager {
   /**
    * Load index from disk
    */
-  loadIndex(tableName, columnName) {
+  function loadIndex(tableName, columnName) {
     const cacheKey = `${tableName}.${columnName}`;
 
     // Check cache first
-    if (this.indexes.has(cacheKey)) {
-      return this.indexes.get(cacheKey);
+    if (indexes.has(cacheKey)) {
+      return indexes.get(cacheKey);
     }
 
     // Load from disk
-    const indexPath = this.getIndexPath(tableName, columnName);
+    const indexPath = getIndexPath(tableName, columnName);
 
     if (!fs.existsSync(indexPath)) {
       return null;
@@ -73,7 +70,7 @@ class IndexManager {
     const index = new Map(indexData.entries);
 
     // Cache it
-    this.indexes.set(cacheKey, index);
+    indexes.set(cacheKey, index);
 
     return index;
   }
@@ -81,8 +78,8 @@ class IndexManager {
   /**
    * Get row indices for a value using the index
    */
-  lookup(tableName, columnName, value) {
-    const index = this.loadIndex(tableName, columnName);
+  function lookup(tableName, columnName, value) {
+    const index = loadIndex(tableName, columnName);
 
     if (!index) {
       return null; // Index doesn't exist
@@ -94,48 +91,61 @@ class IndexManager {
   /**
    * Check if index exists for a column
    */
-  hasIndex(tableName, columnName) {
-    return fs.existsSync(this.getIndexPath(tableName, columnName));
+  function hasIndex(tableName, columnName) {
+    return fs.existsSync(getIndexPath(tableName, columnName));
   }
 
   /**
    * Delete index
    */
-  dropIndex(tableName, columnName) {
-    const indexPath = this.getIndexPath(tableName, columnName);
+  function dropIndex(tableName, columnName) {
+    const indexPath = getIndexPath(tableName, columnName);
 
     if (fs.existsSync(indexPath)) {
       fs.unlinkSync(indexPath);
     }
 
     const cacheKey = `${tableName}.${columnName}`;
-    this.indexes.delete(cacheKey);
+    indexes.delete(cacheKey);
   }
 
   /**
    * Rebuild index after data modification
    */
-  rebuildIndex(tableName, columnName, rows) {
-    this.dropIndex(tableName, columnName);
-    return this.buildIndex(tableName, columnName, rows);
+  function rebuildIndex(tableName, columnName, rows) {
+    dropIndex(tableName, columnName);
+    return buildIndex(tableName, columnName, rows);
   }
 
   /**
    * Create indexes for primary and unique keys
    */
-  createDefaultIndexes(tableName, metadata, rows) {
+  function createDefaultIndexes(tableName, metadata, rows) {
     // Index primary key
     if (metadata.primaryKey) {
-      this.buildIndex(tableName, metadata.primaryKey, rows);
+      buildIndex(tableName, metadata.primaryKey, rows);
     }
 
     // Index unique keys
     if (metadata.uniqueKeys) {
       for (const uniqueKey of metadata.uniqueKeys) {
-        this.buildIndex(tableName, uniqueKey, rows);
+        buildIndex(tableName, uniqueKey, rows);
       }
     }
   }
+
+  return {
+    dataDir,
+    indexes,
+    getIndexPath,
+    buildIndex,
+    loadIndex,
+    lookup,
+    hasIndex,
+    dropIndex,
+    rebuildIndex,
+    createDefaultIndexes,
+  };
 }
 
-module.exports = IndexManager;
+module.exports = createIndexManager;

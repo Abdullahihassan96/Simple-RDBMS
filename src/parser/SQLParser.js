@@ -1,8 +1,8 @@
-class SQLParser {
+function createSQLParser() {
   /**
    * Main parse method
    */
-  parse(sql) {
+  function parse(sql) {
     // Clean up SQL
     sql = sql.trim().replace(/\s+/g, " ");
 
@@ -10,17 +10,17 @@ class SQLParser {
     const upperSQL = sql.toUpperCase();
 
     if (upperSQL.startsWith("CREATE TABLE")) {
-      return this.parseCreateTable(sql);
+      return parseCreateTable(sql);
     } else if (upperSQL.startsWith("INSERT INTO")) {
-      return this.parseInsert(sql);
+      return parseInsert(sql);
     } else if (upperSQL.startsWith("SELECT")) {
-      return this.parseSelect(sql);
+      return parseSelect(sql);
     } else if (upperSQL.startsWith("UPDATE")) {
-      return this.parseUpdate(sql);
+      return parseUpdate(sql);
     } else if (upperSQL.startsWith("DELETE FROM")) {
-      return this.parseDelete(sql);
+      return parseDelete(sql);
     } else if (upperSQL.startsWith("DROP TABLE")) {
-      return this.parseDropTable(sql);
+      return parseDropTable(sql);
     } else {
       throw new Error(`Unsupported SQL command: ${sql.substring(0, 20)}...`);
     }
@@ -30,7 +30,7 @@ class SQLParser {
    * Parse CREATE TABLE statement
    * Example: CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE)
    */
-  parseCreateTable(sql) {
+  function parseCreateTable(sql) {
     const match = sql.match(/CREATE TABLE\s+(\w+)\s*\((.*)\)/i);
     if (!match) {
       throw new Error("Invalid CREATE TABLE syntax");
@@ -44,7 +44,7 @@ class SQLParser {
     const uniqueKeys = [];
 
     // Split by comma, but respect parentheses
-    const columnDefs = this.splitByComma(columnsStr);
+    const columnDefs = splitByComma(columnsStr);
 
     for (const colDef of columnDefs) {
       const parts = colDef.trim().split(/\s+/);
@@ -91,7 +91,7 @@ class SQLParser {
    * Parse INSERT statement
    * Example: INSERT INTO users (id, name, email) VALUES (1, 'John', 'john@example.com')
    */
-  parseInsert(sql) {
+  function parseInsert(sql) {
     const match = sql.match(
       /INSERT INTO\s+(\w+)\s*\((.*?)\)\s*VALUES\s*\((.*?)\)/i
     );
@@ -104,7 +104,7 @@ class SQLParser {
     const valuesStr = match[3];
 
     const columns = columnsStr.split(",").map((c) => c.trim());
-    const values = this.parseValues(valuesStr);
+    const values = parseValues(valuesStr);
 
     const row = {};
     columns.forEach((col, idx) => {
@@ -124,7 +124,7 @@ class SQLParser {
    * Example: SELECT name, email FROM users
    * Example: SELECT u.name, o.amount FROM users u JOIN orders o ON u.id = o.user_id
    */
-  parseSelect(sql) {
+  function parseSelect(sql) {
     const result = {
       type: "SELECT",
       columns: [],
@@ -170,7 +170,7 @@ class SQLParser {
     // Extract WHERE clause
     const whereMatch = sql.match(/WHERE\s+(.+?)$/i);
     if (whereMatch) {
-      result.where = this.parseWhereClause(whereMatch[1].trim());
+      result.where = parseWhereClause(whereMatch[1].trim());
     }
 
     return result;
@@ -180,7 +180,7 @@ class SQLParser {
    * Parse UPDATE statement
    * Example: UPDATE users SET name = 'Jane' WHERE id = 1
    */
-  parseUpdate(sql) {
+  function parseUpdate(sql) {
     const match = sql.match(
       /UPDATE\s+(\w+)\s+SET\s+(.*?)(?:\s+WHERE\s+(.+))?$/i
     );
@@ -197,14 +197,14 @@ class SQLParser {
     const setPairs = setClause.split(",");
     for (const pair of setPairs) {
       const [col, val] = pair.split("=").map((s) => s.trim());
-      updates[col] = this.parseValue(val);
+      updates[col] = parseValue(val);
     }
 
     return {
       type: "UPDATE",
       tableName,
       updates,
-      where: whereClause ? this.parseWhereClause(whereClause) : null,
+      where: whereClause ? parseWhereClause(whereClause) : null,
     };
   }
 
@@ -212,7 +212,7 @@ class SQLParser {
    * Parse DELETE statement
    * Example: DELETE FROM users WHERE id = 1
    */
-  parseDelete(sql) {
+  function parseDelete(sql) {
     const match = sql.match(/DELETE FROM\s+(\w+)(?:\s+WHERE\s+(.+))?$/i);
     if (!match) {
       throw new Error("Invalid DELETE syntax");
@@ -221,14 +221,14 @@ class SQLParser {
     return {
       type: "DELETE",
       tableName: match[1],
-      where: match[2] ? this.parseWhereClause(match[2]) : null,
+      where: match[2] ? parseWhereClause(match[2]) : null,
     };
   }
 
   /**
    * Parse DROP TABLE statement
    */
-  parseDropTable(sql) {
+  function parseDropTable(sql) {
     const match = sql.match(/DROP TABLE\s+(\w+)/i);
     if (!match) {
       throw new Error("Invalid DROP TABLE syntax");
@@ -245,7 +245,7 @@ class SQLParser {
    * Example: "id = 1" -> { column: 'id', operator: '=', value: 1 }
    * Example: "name = 'John' AND age > 25" -> compound condition
    */
-  parseWhereClause(whereStr) {
+  function parseWhereClause(whereStr) {
     // Simple implementation - handles basic conditions
     // For production, you'd want a proper expression parser
 
@@ -254,7 +254,7 @@ class SQLParser {
       const parts = whereStr.split(/\s+AND\s+/i);
       return {
         type: "AND",
-        conditions: parts.map((p) => this.parseSimpleCondition(p.trim())),
+        conditions: parts.map((p) => parseSimpleCondition(p.trim())),
       };
     }
 
@@ -262,17 +262,17 @@ class SQLParser {
       const parts = whereStr.split(/\s+OR\s+/i);
       return {
         type: "OR",
-        conditions: parts.map((p) => this.parseSimpleCondition(p.trim())),
+        conditions: parts.map((p) => parseSimpleCondition(p.trim())),
       };
     }
 
-    return this.parseSimpleCondition(whereStr);
+    return parseSimpleCondition(whereStr);
   }
 
   /**
    * Parse a simple condition
    */
-  parseSimpleCondition(condStr) {
+  function parseSimpleCondition(condStr) {
     const operators = [">=", "<=", "!=", "=", ">", "<"];
 
     for (const op of operators) {
@@ -281,7 +281,7 @@ class SQLParser {
         return {
           column: parts[0],
           operator: op,
-          value: this.parseValue(parts[1]),
+          value: parseValue(parts[1]),
         };
       }
     }
@@ -292,7 +292,7 @@ class SQLParser {
   /**
    * Parse a single value (handle strings, numbers, booleans)
    */
-  parseValue(val) {
+  function parseValue(val) {
     val = val.trim();
 
     // String (single or double quotes)
@@ -321,7 +321,7 @@ class SQLParser {
   /**
    * Parse multiple values from VALUES clause
    */
-  parseValues(valuesStr) {
+  function parseValues(valuesStr) {
     const values = [];
     let current = "";
     let inString = false;
@@ -338,7 +338,7 @@ class SQLParser {
         inString = false;
         current += char;
       } else if (char === "," && !inString) {
-        values.push(this.parseValue(current.trim()));
+        values.push(parseValue(current.trim()));
         current = "";
       } else {
         current += char;
@@ -346,7 +346,7 @@ class SQLParser {
     }
 
     if (current) {
-      values.push(this.parseValue(current.trim()));
+      values.push(parseValue(current.trim()));
     }
 
     return values;
@@ -355,7 +355,7 @@ class SQLParser {
   /**
    * Split string by comma, respecting parentheses
    */
-  splitByComma(str) {
+  function splitByComma(str) {
     const parts = [];
     let current = "";
     let depth = 0;
@@ -380,6 +380,21 @@ class SQLParser {
 
     return parts;
   }
+
+  return {
+    parse,
+    parseCreateTable,
+    parseInsert,
+    parseSelect,
+    parseUpdate,
+    parseDelete,
+    parseDropTable,
+    parseWhereClause,
+    parseSimpleCondition,
+    parseValue,
+    parseValues,
+    splitByComma,
+  };
 }
 
-module.exports = SQLParser;
+module.exports = createSQLParser;

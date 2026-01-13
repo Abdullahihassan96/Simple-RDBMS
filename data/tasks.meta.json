@@ -1,0 +1,36 @@
+{
+  "tableName": "tasks",
+  "columns": [
+    {
+      "name": "id",
+      "type": "INTEGER",
+      "constraints": [
+        "PRIMARY_KEY",
+        "NOT_NULL"
+      ]
+    },
+    {
+      "name": "title",
+      "type": "TEXT",
+      "constraints": []
+    },
+    {
+      "name": "description",
+      "type": "TEXT",
+      "constraints": []
+    },
+    {
+      "name": "status",
+      "type": "TEXT",
+      "constraints": []
+    },
+    {
+      "name": "created_at",
+      "type": "TEXT",
+      "constraints": []
+    }
+  ],
+  "primaryKey": "id",
+  "uniqueKeys": [],
+  "createdAt": "2026-01-10T15:59:09.131Z"
+}
