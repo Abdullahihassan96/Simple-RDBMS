@@ -1,0 +1,19 @@
+{
+  "tableName": "authors",
+  "columnName": "id",
+  "entries": [
+    [
+      1,
+      [
+        0
+      ]
+    ],
+    [
+      2,
+      [
+        1
+      ]
+    ]
+  ],
+  "createdAt": "2026-01-13T12:46:44.554Z"
+}

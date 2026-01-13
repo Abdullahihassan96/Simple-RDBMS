@@ -3,7 +3,9 @@ const path = require("path");
 const createDatabase = require("../src/Database");
 
 const app = express();
-const db = createDatabase("./data");
+// Point to project data folder (one level up from web-app)
+const dataDir = path.join(__dirname, "../data");
+const db = createDatabase(dataDir);
 const PORT = 3000;
 
 // Middleware
@@ -169,9 +171,24 @@ app.post("/api/query", (req, res) => {
         .json({ success: false, error: "SQL query required" });
     }
 
-    const result = db.query(sql);
+    // Normalize: collapse multiple spaces/newlines to single space, trim, strip semicolons
+    const normalizedSql = sql
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/;+\s*$/, "");
+
+    if (!normalizedSql) {
+      return res
+        .status(400)
+        .json({ success: false, error: "SQL query required" });
+    }
+
+    console.log("Executing SQL:", normalizedSql);
+    const result = db.query(normalizedSql);
+    console.log("Result:", result);
     res.json(result);
   } catch (error) {
+    console.error("Query error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -191,7 +208,7 @@ initializeDB();
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Web app running at http://localhost:${PORT}`);
-  console.log(`📊 Database directory: ./data`);
+  console.log(`📊 Database directory: ${dataDir}`);
   console.log(`\nAPI Endpoints:`);
   console.log(`  GET    /api/tasks       - List all tasks`);
   console.log(`  GET    /api/tasks/:id   - Get single task`);

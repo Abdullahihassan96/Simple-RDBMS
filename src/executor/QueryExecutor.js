@@ -102,15 +102,19 @@ function createQueryExecutor(database) {
 
     const [, leftAlias, leftCol, rightAlias, rightCol] = onMatch;
 
-    // Determine which table is which based on alias
-    const leftJoinCol =
-      leftAlias === (query.tableAlias || query.tableName.charAt(0))
-        ? leftCol
-        : rightCol;
-    const rightJoinCol =
-      rightAlias === (query.join.tableAlias || query.join.tableName.charAt(0))
-        ? rightCol
-        : leftCol;
+    // Determine expected aliases/names (support alias, full table name, or first letter shorthand)
+    const leftExpectedAlias = query.tableAlias || query.tableName;
+    const rightExpectedAlias = query.join.tableAlias || query.join.tableName;
+
+    const matchesLeft =
+      leftAlias === leftExpectedAlias ||
+      leftAlias === leftExpectedAlias.charAt(0);
+    const matchesRight =
+      rightAlias === rightExpectedAlias ||
+      rightAlias === rightExpectedAlias.charAt(0);
+
+    const leftJoinCol = matchesLeft ? leftCol : rightCol;
+    const rightJoinCol = matchesRight ? rightCol : leftCol;
 
     // Perform nested loop join
     const joinedRows = [];
